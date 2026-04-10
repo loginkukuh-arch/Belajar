@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Scanner - Proyek Murid</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2d6a4f;
+            --secondary: #52b788;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h2 { color: var(--primary); margin-bottom: 0.5rem; }
+        p { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+        #webcam-container {
+            margin: 0 auto 1.5rem;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #e9ecef;
+            border: 3px solid var(--secondary);
+            display: inline-block;
+            line-height: 0;
+        }
+
+        /* Tombol Modern */
+        .btn-start {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(45, 106, 79, 0.3);
+        }
+
+        .btn-start:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        /* Label Hasil Prediksi */
+        #label-container {
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+
+        .prediction-bar {
+            background: #eee;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            position: relative;
+            height: 30px;
+            overflow: hidden;
+        }
+
+        .prediction-fill {
+            background: var(--secondary);
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .prediction-text {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>AI Smart Scanner</h2>
+    <p>Aktifkan kamera untuk mulai mendeteksi objek secara otomatis.</p>
+
+    <div id="webcam-container">
+        </div>
+
+    <br>
+    <button class="btn-start" type="button" onclick="init()">Mulai Scan Sekarang</button>
+
+    <div id="label-container">
+        </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<script type="text/javascript">
+    // 1. GANTI LINK DI BAWAH INI DENGAN LINK MILIK MURID
+    const URL = "https://teachablemachine.withgoogle.com/models/PASTE_LINK_DISINI/";
+
+    let model, webcam, labelContainer, maxPredictions;
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // Load model
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Setup Webcam
+        const flip = true; 
+        webcam = new tmImage.Webcam(320, 320, flip); 
+        await webcam.setup(); 
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // Menampilkan canvas kamera
+        document.getElementById("webcam-container").innerHTML = ""; // Bersihkan placeholder
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        
+        // Siapkan bar hasil prediksi
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = ""; // Bersihkan teks awal
+        for (let i = 0; i < maxPredictions; i++) {
+            let bar = document.createElement("div");
+            bar.className = "prediction-bar";
+            bar.innerHTML = `<div class="prediction-fill" id="fill-${i}"></div>
+                             <div class="prediction-text" id="text-${i}"></div>`;
+            labelContainer.appendChild(bar);
+        }
+    }
+
+    async function loop() {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+        const prediction = await model.predict(webcam.canvas);
+        for (let i = 0; i < maxPredictions; i++) {
+            const prob = (prediction[i].probability * 100).toFixed(0);
+            const className = prediction[i].className;
+            
+            // Update bar dan teks
+            document.getElementById(`fill-${i}`).style.width = prob + "%";
+            document.getElementById(`text-${i}`).innerText = `${className}: ${prob}%`;
+        }
+    }
+</script>
+
+</body>
+</html>
